@@ -22,6 +22,6 @@ RUN apt-get install -y ./chromium-chromedriver_90.0.4430.93-0ubuntu0.16.04.1_arm
 
 # Install selenium
 RUN pip install -U pip
-RUN pip install selenium
+RUN pip install selenium paramiko
 
 RUN rm -f ./*.deb
