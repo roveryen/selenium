@@ -1,27 +1,31 @@
 from selenium import webdriver
+from django.conf import settings
+from pathlib import Path
 
 import paramiko
-
-import config
-
-from pprint import pprint
 
 import os
 import json
 import re
+import logging
 
-class scrappy():
+class Scrappy():
 
-    dictTargetUrl = {}
+    dict_target_url = {}
+    dict_specification_url = {}
 
-    dictCssSelector = {}
+    dict_css_selectors = {}
 
-    scrapeResults = {
+    SFTP = {}
+
+    logger = None
+
+    scrape_results = {
         'source': 'scrappy',        
         'evs': []
     }
 
-    dictLabelTextMap = {
+    dict_label_text_map = {
         '馬達出力' : '_power',
         'Total Power *' : 'power',
         'Total Power' : 'power',
@@ -96,14 +100,14 @@ class scrappy():
 
     }
 
-
-
     driver = None
 
-    currentWorkingDirectory = ""
+    JSON_RESULT_DIR = str(Path(__file__).resolve().parent) + "/results"
     
 
     def __init__(self):
+
+        self.init_logger()
 
         options = webdriver.ChromeOptions()
         options.add_argument('--headless')
@@ -115,72 +119,88 @@ class scrappy():
 
         self.driver = webdriver.Chrome(options=options)
 
-        self.currentWorkingDirectory = os.path.dirname(os.path.realpath(__file__))
-        #print(self.currentWorkingDirectory)
+        self.SFTP = settings.SFTP
+        self.SFTP["remote_file_path"] = "./www.ddcar.com.tw/storage/app/evs"
+
+        #self.JSON_RESULT_DIR = os.path.dirname(os.path.realpath(__file__))
+        #print(self.JSON_RESULT_DIR)
 
     
-    def parseDataToNumberFormat(self, s):
+    def parse_data_to_number_format(self, s):
         return re.sub(r"[^\d]*([\d\.]+).*[\r\n]*", r"\1", s)
         
-    def parseTitleToSlug(self, s):
+    def parse_title_to_slug(self, s):
         return re.sub(r"\s+", r"-", s.lower())
 
-    def parsePowerToHorsePower(self, s):
+    def parse_power_to_horse_power(self, s):
         return re.sub(r"([0-9\.]+)hp.*", r"\1", s)
 
-    def parsePowerToTorque(self, s):        
+    def parse_power_to_torque(self, s):
         return re.sub(r"[^/]+/?(.*)kgm.*", r"\1", s)
 
-    def getResultFileName(self):
-        return "result-" + self.scrapeResults['source'] + ".json"
+    def init_logger(self):
+        fileHandler = logging.FileHandler('/project/logs/log-evs.txt')
+        fileHandler.setFormatter( logging.Formatter('%(asctime)s - %(levelname)s : %(message)s') )
 
-    def saveScrapeResultToFile(self):
+        self.logger = logging.getLogger('evs')
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(fileHandler)
+
+    def logging(self, d):
+        self.logger.info(d)
+
+    def get_result_file_name(self):
+        return "result-" + self.scrape_results['source'] + ".json"
+
+    def save_scrape_result_to_file(self):
         try:
-            resultFileName = self.getResultFileName()
-            print("Saving data to ... => " + self.currentWorkingDirectory + "/" + resultFileName)
-            f = open(self.currentWorkingDirectory + "/" + resultFileName, "w")
-            f.write( json.dumps(self.scrapeResults) )
+            result_file_name = self.get_result_file_name()
+            self.logging("Saving data to ... => " + self.JSON_RESULT_DIR + "/" + result_file_name)
+            f = open(self.JSON_RESULT_DIR + "/" + result_file_name, "w")
+            f.write( json.dumps(self.scrape_results) )
             f.close()
         finally:
             pass
 
-    def rcsvMakeDirectory(self, sftp, path):
+    def rcsv_make_directory(self, sftp, path):
         try:
-            print("Checking and create remote directory => " + path)
+            self.logging("Checking and create remote directory => " + path)
             sftp.stat(path)
         except FileNotFoundError:
             dirpath = path.rsplit("/", 1)[0]
-            self.rcsvMakeDirectory(sftp, dirpath)
+            self.rcsv_make_directory(sftp, dirpath)
             sftp.mkdir(path)
 
         finally:
             pass
 
-    def uploadResultFileToSFtp(self):        
+    def upload_result_file_to_sftp(self):
     
         try:
 
-            resultFileName = self.getResultFileName()            
+            SFTP = self.SFTP
 
-            host = config.sftp["hostname"]
-            port = config.sftp["port"]
+            result_file_name = self.get_result_file_name()
+
+            host = SFTP["hostname"]
+            port = SFTP["port"]
 
             transport = paramiko.Transport((host, port))
-            transport.connect(username = config.sftp["username"], password = config.sftp["password"])
+            transport.connect(username = SFTP["username"], password = SFTP["password"])
 
             sftp = paramiko.SFTPClient.from_transport(transport)
 
-            self.rcsvMakeDirectory(sftp, config.sftp["remoteFilePath"])
+            self.rcsv_make_directory(sftp, SFTP["remote_file_path"])
 
             # Upload file to root FTP folder
-            print("Upload " + resultFileName + " to ...\n=> " + config.sftp["remoteFilePath"] + "/" + resultFileName)
-            sftp.put(self.currentWorkingDirectory + "/" + resultFileName, config.sftp["remoteFilePath"] + "/" + resultFileName)
+            self.logging("Upload " + result_file_name + " to ...\n=> " + SFTP["remote_file_path"] + "/" + result_file_name)
+            sftp.put(self.JSON_RESULT_DIR + "/" + result_file_name, SFTP["remote_file_path"] + "/" + result_file_name)
                     
-            print("File " + self.currentWorkingDirectory + "/" + resultFileName + " uploaded successfully.")
+            self.logging("File " + self.JSON_RESULT_DIR + "/" + result_file_name + " uploaded successfully.")
 
     
         except Exception as e:
-            print(f"Error: {str(e)}")
+            self.logging(f"Error: {str(e)}")
     
         finally:
             # Close the SFTP session and SSH connection            
@@ -189,24 +209,22 @@ class scrappy():
             
 
     
-    def startScrapeData(self):
+    def start_scrape_data(self):
 
-        try:            
+        try:
 
-            for source in self.dictTargetUrl:
-                targerUrl = self.dictTargetUrl[source]
+            for source in self.dict_target_url:
+                target_url = self.dict_target_url[source]
 
-                print("Scraping from ...\n=> " + targerUrl)
-                self.driver.get(targerUrl)
+                self.logging("Scraping from ...\n=> " + target_url)
+                self.driver.get(target_url)
 
-                self.scrapeResults['source'] = source
-                self.scrapeResults['evs'] = []
-                self.extractSourceData()
-                self.saveScrapeResultToFile()
-                self.uploadResultFileToSFtp()
+                self.scrape_results['source'] = source
+                self.scrape_results['evs'] = []
+                self.extract_source_data()
+                self.save_scrape_result_to_file()
+                self.upload_result_file_to_sftp()
         
         finally:
             self.driver.close()
             self.driver.quit()
-
-    

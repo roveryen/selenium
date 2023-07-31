@@ -1,26 +1,22 @@
-
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
-from pprint import pprint
+from .scrappy import Scrappy
 
-
-from scrappy import scrappy
-
-class scrappyAudi(scrappy):
+class ScrappyAudi(Scrappy):
 
     def __init__(self):
         
-        self.dictTargetUrl = {
+        self.dict_target_url = {
             "audi"  : "https://charging-map.audi-service.com.tw/",
         }
 
-        self.dictCssSelector = {
+        self.dict_css_selectors = {
             "gmap"    : ".gm-style",
         }
 
-        self.scrapeResults = {
+        self.scrape_results = {
             'source': 'audi',
             'plug' : 'all',
             'stations': []
@@ -29,7 +25,7 @@ class scrappyAudi(scrappy):
         super().__init__()
 
 
-    def __extractStationData(self, element):
+    def __extract_station_data(self, element):
         try:
         
             """
@@ -51,58 +47,44 @@ class scrappyAudi(scrappy):
                 result["lng"] = element["lng"]
                 result["remark"] = element["m"]
 
-                self.scrapeResults['stations'].append(result)
-                pprint(result)
+                self.scrape_results['stations'].append(result)
+                self.logging(result)
 
         finally:
             pass
 
-    def __extractMapData(self):
+    def __extract_map_data(self):
         try:
-            print("extractMapData => ready to detect gmap")
+            self.logging("extractMapData => ready to detect gmap")
 
             WebDriverWait(self.driver, 30).until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, self.dictCssSelector["gmap"]))
+                EC.visibility_of_element_located((By.CSS_SELECTOR, self.dict_css_selectors["gmap"]))
             )
 
-            gmap = self.driver.find_elements(By.CSS_SELECTOR, self.dictCssSelector["gmap"])
+            gmap = self.driver.find_elements(By.CSS_SELECTOR, self.dict_css_selectors["gmap"])
             if ( len(gmap) > 1 ):
-                print("extractTableData => too many maps in this page")
+                self.logging("extractTableData => too many maps in this page")
                 return False
 
             gmap = gmap[0]
 
-            #print("gmap is visible")
             stations = self.driver.execute_script('return window.stations')
             for station in stations:
-                self.__extractStationData(station)
+                self.__extract_station_data(station)
         
 
         finally:
             pass
 
 
-    def extractSourceData(self):
+    def extract_source_data(self):
         try:
-            self.__extractMapData()
+            self.__extract_map_data()
         finally:
             pass
 
-    def saveScrapeResultToFile(self):
+    def save_scrape_result_to_file(self):
         try:
-            super().saveScrapeResultToFile()
+            super().save_scrape_result_to_file()
         finally:
             pass
-
-def main():
-    
-    try:
-        s = scrappyAudi()
-        s.startScrapeData()
-
-    finally:
-        pass
-
-
-if __name__ == '__main__':
-    main()

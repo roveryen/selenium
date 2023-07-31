@@ -4,14 +4,13 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from selenium.common.exceptions import NoSuchElementException
 
-from pprint import pprint
 import urllib.parse
 import re
 import time
 
-from scrappy import scrappy
+from .scrappy import Scrappy
 
-class scrappyEVDatabase(scrappy):
+class ScrappyEVDatabase(Scrappy):
 
     brands = [
         'audi',
@@ -36,12 +35,12 @@ class scrappyEVDatabase(scrappy):
     def __init__(self):
         
         
-        self.dictTargetUrl = {
+        self.dict_target_url = {
             "ev-database"  : "https://ev-database.org/",            
         }
 
         # url + "/spec#car-trim-nav"
-        self.dictCssSelector = {
+        self.dict_css_selectors = {
             "search-result" : ".content.jplist .list",
             'href-button' : '.list-item h2 a.title',
             'next-page'   : '.pagination-wrapper .jplist-next',
@@ -50,7 +49,7 @@ class scrappyEVDatabase(scrappy):
             'spec' : '#main-data .data-table table > tbody > tr',            
         }
 
-        self.scrapeResults = {
+        self.scrape_results = {
             'source': 'ev-database',
             'evs': []
         }
@@ -58,19 +57,19 @@ class scrappyEVDatabase(scrappy):
 
         super().__init__()
 
-    def __appendMoreSpecs(self, result, dictSpecification):
+    def __append_more_specs(self, result, dictSpecification):
         try:
             if dictSpecification["key"] == "_power" :
                 result["specs"].append({
                     "label" : "等效馬力",
                     "key"  : "horsepower",
-                    "value" : self.parsePowerToHorsePower(dictSpecification['value'])
+                    "value" : self.parse_power_to_horse_power(dictSpecification['value'])
                 })
 
                 result["specs"].append({
                     "label" : "扭力",
                     "key"  : "torque",
-                    "value" : self.parsePowerToTorque(dictSpecification['value'])
+                    "value" : self.parse_power_to_torque(dictSpecification['value'])
                 })
             elif dictSpecification["key"] == "brake" :
                 result["specs"].append({
@@ -113,11 +112,11 @@ class scrappyEVDatabase(scrappy):
             return result
     
     
-    def __extractSourceData(self, slug):
+    def __extract_source_data(self, slug):
         returnValue = True
         try:
             element = WebDriverWait(self.driver, 60).until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, self.dictCssSelector["title"]))
+                EC.visibility_of_element_located((By.CSS_SELECTOR, self.dict_css_selectors["title"]))
             )
 
             result = {
@@ -128,16 +127,16 @@ class scrappyEVDatabase(scrappy):
                 "remark" : ""
             }
 
-            title = self.driver.find_element(By.CSS_SELECTOR, self.dictCssSelector["title"])
+            title = self.driver.find_element(By.CSS_SELECTOR, self.dict_css_selectors["title"])
             result["title"] = title.text
 
-            photos = self.driver.find_elements(By.CSS_SELECTOR, self.dictCssSelector["photo"])            
+            photos = self.driver.find_elements(By.CSS_SELECTOR, self.dict_css_selectors["photo"])
             for photo in photos:
                 src = photo.get_attribute('src')
                 src = src.replace("-thumb.jpg", ".jpg")                
                 result["photos"].append(src)
 
-            specs = self.driver.find_elements(By.CSS_SELECTOR, self.dictCssSelector["spec"])
+            specs = self.driver.find_elements(By.CSS_SELECTOR, self.dict_css_selectors["spec"])
             for index, spec in enumerate(specs):
 
                 dictSpecification = {
@@ -151,8 +150,8 @@ class scrappyEVDatabase(scrappy):
                     if index == 0:
                         dictSpecification["label"] = cell.text
 
-                        if cell.text in self.dictLabelTextMap.keys():
-                            key = self.dictLabelTextMap[cell.text]
+                        if cell.text in self.dict_label_text_map.keys():
+                            key = self.dict_label_text_map[cell.text]
                             dictSpecification["key"] = key
                         
                     elif index == 1:
@@ -169,76 +168,76 @@ class scrappyEVDatabase(scrappy):
 
                     result["specs"].append(dictSpecification)
 
-                #result = self.__appendMoreSpecs(result, dictSpecification)
+                #result = self.__append_more_specs(result, dictSpecification)
 
 
-            #pprint(result)
+            #self.logging(result)
             if "blocked" in result["title"]:                
-                print("Request blocked, will try again later...")
+                self.logging("Request blocked, will try again later...")
                 returnValue = False
                 return returnValue
 
-            self.scrapeResults['evs'].append(result)
+            self.scrape_results['evs'].append(result)
 
         finally:
             return returnValue
 
-    def __extractDetailData(self):
+    def __extract_detail_data(self):
         try:
 
             seconds = 5
-            for slug in self.dictTargetUrl:
-                targetUrl = self.dictTargetUrl[slug]
+            for slug in self.dict_target_url:
+                targetUrl = self.dict_target_url[slug]
                 
                 for x in range(6):
 
-                    print("Scraping ... " + slug)
+                    self.logging("Scraping ... " + slug)
                     self.driver.get(targetUrl)
 
-                    if False is self.__extractSourceData(slug) :
-                        print("Waiting for " + str(20*seconds) + " seconds")
+                    if False is self.__extract_source_data(slug) :
+                        self.logging("Waiting for " + str(20*seconds) + " seconds")
                         time.sleep(20*seconds)
                     else:
                         break
 
-                print("Waiting for " + str(seconds) + " seconds")
+                self.logging("Waiting for " + str(seconds) + " seconds")
                 time.sleep(seconds)
 
-                #print( len(self.scrapeResults['evs']) % 5 )
+                #self.logging( len(self.scrape_results['evs']) % 5 )
                 """
-                if len(self.scrapeResults['evs']) % 5 == 0 :
-                    print("Waiting another " + str(3*seconds) + " seconds")
+                if len(self.scrape_results['evs']) % 5 == 0 :
+                    self.logging("Waiting another " + str(3*seconds) + " seconds")
                     time.sleep(3*seconds)
                 """
                 
         finally:
             pass
 
-    def __extractSearchResultData(self):
+    def __extract_search_result_data(self):
         try:
 
             element = WebDriverWait(self.driver, 60).until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, self.dictCssSelector["search-result"]))
+                EC.visibility_of_element_located((By.CSS_SELECTOR, self.dict_css_selectors["search-result"]))
             )
 
-            searchResult = self.driver.find_elements(By.CSS_SELECTOR, self.dictCssSelector["search-result"])
+            searchResult = self.driver.find_elements(By.CSS_SELECTOR, self.dict_css_selectors["search-result"])
             if ( len(searchResult) > 1 ):
-                print("extractSearchResultData => too many result in this page")
+                self.logging("extractSearchResultData => too many result in this page")
                 return False
             
-            d = scrappyEVDatabase()
-            d.scrapeResults = {
-                "source": self.scrapeResults["source"],
+            d = ScrappyEVDatabase()
+            d.scrape_results = {
+                "source": self.scrape_results["source"],
                 "evs"   : []
             }
 
-            d.dictTargetUrl = {}
-            d.dictCssSelector = self.dictCssSelector.copy()
-            del d.dictCssSelector['search-result']
-            del d.dictCssSelector['href-button']
-            del d.dictCssSelector['next-page']
+            d.dict_target_url = {}
+            d.dict_css_selectors = self.dict_css_selectors.copy()
+            del d.dict_css_selectors['search-result']
+            del d.dict_css_selectors['href-button']
+            del d.dict_css_selectors['next-page']
 
-            buttons = searchResult[0].find_elements(By.CSS_SELECTOR, self.dictCssSelector['href-button'])
+            buttons = searchResult[0].find_elements(By.CSS_SELECTOR, self.dict_css_selectors['href-button'])
             for index, button in enumerate(buttons):
                 href = button.get_attribute('href')
                 if ( None is href ):
@@ -248,21 +247,21 @@ class scrappyEVDatabase(scrappy):
                     slug = re.sub(r"^.+car\/\d+\/(.+)$", r"\1", href)
                     slug = urllib.parse.unquote(slug)
                     slug = slug.lower()
-                    if slug in d.dictTargetUrl.keys():
+                    if slug in d.dict_target_url.keys():
                         pass
                     else:
                         for prefix in self.brands:
                             if prefix+'-' in slug:
-                                d.dictTargetUrl[slug] = href
+                                d.dict_target_url[slug] = href
                                 break
 
              
-            #pprint(d.dictTargetUrl)
-            d.__extractDetailData()
-            self.scrapeResults["evs"] = self.scrapeResults["evs"] + d.scrapeResults["evs"]
+            #self.logging(d.dict_target_url)
+            d.__extract_detail_data()
+            self.scrape_results["evs"] = self.scrape_results["evs"] + d.scrape_results["evs"]
             
             try:
-                nextPage = self.driver.find_element(By.CSS_SELECTOR, self.dictCssSelector["next-page"])
+                nextPage = self.driver.find_element(By.CSS_SELECTOR, self.dict_css_selectors["next-page"])
                 if None is nextPage :
                     pass
                 else:
@@ -271,45 +270,23 @@ class scrappyEVDatabase(scrappy):
                         pass
                     else:
                         nextPage.click()
-                        #print("scrape next page")
-                        return self.__extractSearchResultData()
+                        #self.logging("scrape next page")
+                        return self.__extract_search_result_data()
 
             except NoSuchElementException :
                 pass
             finally:
                 pass            
 
-            #print ("=> Total " + str(len(self.scrapeResults['evs'])) + " results")
+            #self.logging ("=> Total " + str(len(self.scrape_results['evs'])) + " results")
 
 
         finally:
             pass
 
 
-    def extractSourceData(self):
+    def extract_source_data(self):
         try:
-            self.__extractSearchResultData()
+            self.__extract_search_result_data()
         finally:
             pass
-
-    """
-    def saveScrapeResultToFile(self):
-        try:
-            super().saveScrapeResultToFile()
-        finally:
-            pass
-    """
-
-def main():
-    
-    try:
-        s = scrappyEVDatabase()
-        s.startScrapeData()
-        
-
-    finally:
-        pass
-
-
-if __name__ == '__main__':
-    main()

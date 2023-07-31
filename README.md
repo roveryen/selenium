@@ -28,7 +28,7 @@ sftp = dict(
     username       = "",
     password       = "",
     port           = 22,
-    remoteFilePath = "./",
+    remote_file_path = "./",
 )
 ```
 

@@ -4,27 +4,25 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from selenium.common.exceptions import NoSuchElementException
 
-from pprint import pprint
-import time
+from .scrappy import Scrappy
 
-from scrappy import scrappy
+import time
 
 """
 CCS1 快充地圖：https://bit.ly/TeslaHereCCS1
 CCS2 快充地圖：https://bit.ly/TeslaHereCCS2
-Tesla 超充地圖：https://bit.ly/TeslaHereSC（Tesla 車輛適用）
 """
 
-class scrappyTeslaHere(scrappy):
+class ScrappyTeslaHere(Scrappy):
     def __init__(self):
         
-        self.dictTargetUrl = {
+        self.dict_target_url = {
             "ccs1"  : "https://www.google.com/maps/d/viewer?mid=19OGC8E8JMvUgHOEJkpkBUXnqiYgfwEcZ",
             "ccs2"  : "https://www.google.com/maps/d/viewer?mid=1K8SBziyQK5fogutH3cvxfAnX4TrWvP0",
             #"tesla" : "https://www.google.com/maps/d/viewer?mid=1-kwJpQRM_xTh1fWb8JESCOz9hxyIphkc"
         }
 
-        self.dictCssSelector = {
+        self.dict_css_selectors = {
             "expandItem" : ".uVccjd.HzV7m-pbTTYe-KoToPc-ornU0b-hFsbo",
             "listItem"   : ".HzV7m-pbTTYe-ibnC6b-V67aGc",
             "labelItem"  : ".qqvbed-p83tee-lTBxed",
@@ -32,11 +30,11 @@ class scrappyTeslaHere(scrappy):
             "detailLayer": ".dzWwaf-qqvbed",
         }
 
-        self.dictClassName = {
-            "parentItem" : "pbTTYe-ibnC6b-d6wfac",
+        self.dict_class_names = {
+            "parent_item" : "pbTTYe-ibnC6b-d6wfac",
         }
 
-        self.scrapeResults = {
+        self.scrape_results = {
             'source': 'teslahere',
             'plug' : 'all',
             'stations': []
@@ -45,13 +43,13 @@ class scrappyTeslaHere(scrappy):
         super().__init__()
 
 
-    def __isListItemClickable(self, element):
+    def __is_list_item_clickable(self, element):
         try:
             parentElement = element.find_element(By.XPATH, "./..")
             className = parentElement.get_attribute('class')
         
-            if self.dictClassName["parentItem"] in className:
-                #print("isListItemClickable => " + self.dictClassName["parentItem"] + " in " + className)            
+            if self.dict_class_names["parent_item"] in className:
+                #self.logging("isListItemClickable => " + self.dict_class_names["parent_item"] + " in " + className)
                 return True
 
             return False
@@ -59,27 +57,27 @@ class scrappyTeslaHere(scrappy):
         finally:
             pass
 
-    def __showDetail(self, element):
+    def __show_detail(self, element):
         try:        
 
             if ( False == element.is_enabled() ):
-                print("showDetail => element is not enabled")
+                self.logging("showDetail => element is not enabled")
                 return False
 
             if ( False == element.is_displayed() ):
-                print("showDetail => element is not displayed")
+                self.logging("showDetail => element is not displayed")
                 return False
 
-            isClickable = self.__isListItemClickable(element)
+            isClickable = self.__is_list_item_clickable(element)
 
             if False == isClickable :
-                print("showDetail => element is not clickable")
+                self.logging("showDetail => element is not clickable")
                 return False
 
             element.click()
 
             WebDriverWait(self.driver, 5).until(
-                EC.visibility_of_element_located((By.CSS_SELECTOR, self.dictCssSelector["detailLayer"]))
+                EC.visibility_of_element_located((By.CSS_SELECTOR, self.dict_css_selectors["detailLayer"]))
             )
         
 
@@ -91,7 +89,7 @@ class scrappyTeslaHere(scrappy):
                 "remark" : ""
             }
 
-            selector = self.dictCssSelector["detailLayer"] + " " + self.dictCssSelector["labelItem"]
+            selector = self.dict_css_selectors["detailLayer"] + " " + self.dict_css_selectors["labelItem"]
             labelItems = self.driver.find_elements(By.CSS_SELECTOR, selector)
             for index, labelItem in enumerate(labelItems):
                 if index == 0 :
@@ -101,12 +99,12 @@ class scrappyTeslaHere(scrappy):
                 else :
                     result["remark"] = labelItem.text
 
-            self.scrapeResults['stations'].append(result)
-            pprint(result)
+            self.scrape_results['stations'].append(result)
+            self.logging(result)
 
             #self.driver.save_screenshot(screenShotFileName + ".png")
 
-            selector = self.dictCssSelector["detailLayer"] + " " + self.dictCssSelector["closeButton"]
+            selector = self.dict_css_selectors["detailLayer"] + " " + self.dict_css_selectors["closeButton"]
             button = self.driver.find_element(By.CSS_SELECTOR, selector)
             button.click()
 
@@ -117,31 +115,31 @@ class scrappyTeslaHere(scrappy):
 
 
 
-    def __showList(self):
+    def __show_list(self):
         try:        
 
             #element.click()
                 
             WebDriverWait(self.driver, 5).until(
-                EC.presence_of_element_located((By.CSS_SELECTOR, self.dictCssSelector["listItem"]))
+                EC.presence_of_element_located((By.CSS_SELECTOR, self.dict_css_selectors["listItem"]))
             )
         
-            listItems = self.driver.find_elements(By.CSS_SELECTOR, self.dictCssSelector["listItem"])
+            listItems = self.driver.find_elements(By.CSS_SELECTOR, self.dict_css_selectors["listItem"])
             for index, listItem in enumerate(listItems):
-                self.__showDetail(listItem)
+                self.__show_detail(listItem)
 
             #self.driver.save_screenshot('search.png')
         finally:
             pass        
 
-    def __expandList(self):
+    def __expand_list(self):
         try:        
 
             element = WebDriverWait(self.driver, 5).until(
-                EC.element_to_be_clickable((By.CSS_SELECTOR, self.dictCssSelector["expandItem"]))
+                EC.element_to_be_clickable((By.CSS_SELECTOR, self.dict_css_selectors["expandItem"]))
             )
 
-            expandItems = self.driver.find_elements(By.CSS_SELECTOR, self.dictCssSelector["expandItem"])
+            expandItems = self.driver.find_elements(By.CSS_SELECTOR, self.dict_css_selectors["expandItem"])
         
 
             for element in expandItems:
@@ -150,33 +148,15 @@ class scrappyTeslaHere(scrappy):
 
                 #for index, expandItem in enumerate(expandItems):
                 #    showList(self.driver, screenShotFileName + '-' + str(index), expandItem)
-                self.__showList()
+                self.__show_list()
 
         finally:
             pass
 
 
-    def extractSourceData(self):
+    def extract_source_data(self):
         try:
-            self.__expandList()
+            self.__expand_list()
         finally:
             pass
 
-    def saveScrapeResultToFile(self):
-        try:
-            super().saveScrapeResultToFile()
-        finally:
-            pass
-
-def main():
-    
-    try:
-        s = scrappyTeslaHere()
-        s.startScrapeData()        
-
-    finally:
-        pass
-
-
-if __name__ == '__main__':
-    main()

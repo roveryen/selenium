@@ -2,15 +2,19 @@ version: "3"
 services:
   chrome:
 #    build: ./arm64/Dockerfile
-    image: selenium/arm64
+    image: selenium:arm64
     container_name: selenium-chrome
     shm_size: 2gb
     tty: true
+#    command: ["python", "/project/manage.py", "runserver", "0.0.0.0:8000"]
+    command: ["python", "/project/manage.py", "runserver", "--noreload"]
+    ports:
+      - 8001:8001
     environment:
       - SE_EVENT_BUS_HOST=selenium-hub
       - SE_EVENT_BUS_PUBLISH_PORT=4442
       - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
     volumes:
-      - ./project:/project
+      - ./project:/project:Z
 
 

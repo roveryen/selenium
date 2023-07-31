@@ -1,22 +1,25 @@
 from selenium import webdriver
+from django.conf import settings
+from pathlib import Path
 
 import paramiko
-
-import config
-
-from pprint import pprint
 
 import os
 import json
 import re
+import logging
 
-class scrappy():
+class Scrappy():
 
-    dictTargetUrl = {}
+    dict_target_url = {}
 
-    dictCssSelector = {}
+    dict_css_selectors = {}
 
-    scrapeResults = {
+    SFTP = {}
+
+    logger = None
+
+    scrape_results = {
         'source': 'scrappy',
         'plug' : 'all',
         'stations': []
@@ -24,10 +27,11 @@ class scrappy():
 
     driver = None
 
-    currentWorkingDirectory = ""
-    
+    JSON_RESULT_DIR = str(Path(__file__).resolve().parent) + "/results"
 
     def __init__(self):
+
+        self.init_logger()
 
         options = webdriver.ChromeOptions()
         options.add_argument('--headless')
@@ -39,61 +43,83 @@ class scrappy():
 
         self.driver = webdriver.Chrome(options=options)
 
-        self.currentWorkingDirectory = os.path.dirname(os.path.realpath(__file__))
-        #print(self.currentWorkingDirectory)
+        self.SFTP = settings.SFTP
+        self.SFTP["remote_file_path"] = "./www.ddcar.com.tw/storage/app/stations"
+
+        #self.JSON_RESULT_DIR = os.path.dirname(os.path.realpath(__file__))
+        #self.logging(self.JSON_RESULT_DIR)
 
     
-    def parseDataToNumberFormat(self, s):
+    def parse_data_to_number_format(self, s):
         return re.sub(r"[^\d]*([\d\.]+).*[\r\n]*", r"\1", s)
     
-    def parseDataToTitle(self, s):
+    def parse_data_to_title(self, s):
         return re.sub(r"^([^]+).*", r"\1", s)
     
-    def parseDataToAddress(self, s):
-        return re.sub(r".*\((.+)\).*", r"\1", s)        
+    def parse_data_to_address(self, s):
+        return re.sub(r".*\((.+)\).*", r"\1", s)
 
-    def getResultFileName(self):
-        return "result-" + self.scrapeResults['plug'] + ".json"
+    def init_logger(self):
+        fileHandler = logging.FileHandler('/project/logs/log-stations.txt')
+        fileHandler.setFormatter( logging.Formatter('%(asctime)s - %(levelname)s : %(message)s') )
 
-    def saveScrapeResultToFile(self):
+        self.logger = logging.getLogger('stations')
+        self.logger.setLevel(logging.INFO)
+        self.logger.addHandler(fileHandler)
+
+    def logging(self, d):
+        self.logger.info(d)
+
+    def getresult_filename(self):
+        return "result-" + self.scrape_results['plug'] + ".json"
+
+    def save_scrape_result_to_file(self):
         try:
-            resultFileName = self.getResultFileName()
-            f = open(self.currentWorkingDirectory + "/" + resultFileName, "w")
-            f.write( json.dumps(self.scrapeResults) )
+            result_filename = self.getresult_filename()
+            f = open(self.JSON_RESULT_DIR + "/" + result_filename, "w")
+            f.write( json.dumps(self.scrape_results) )
             f.close()
         finally:
             pass
 
+    def rcsv_make_directory(self, sftp, path):
+        try:
+            self.logging("Checking and create remote directory => " + path)
+            sftp.stat(path)
+        except FileNotFoundError:
+            dirpath = path.rsplit("/", 1)[0]
+            self.rcsv_make_directory(sftp, dirpath)
+            sftp.mkdir(path)
 
-    def uploadResultFileToSFtp(self):        
+        finally:
+            pass
+
+    def upload_result_file_to_sftp(self):
     
         try:
 
-            resultFileName = self.getResultFileName()            
+            SFTP = self.SFTP
 
-            host = config.sftp["hostname"]
-            port = config.sftp["port"]
+            result_filename = self.getresult_filename()
+
+            host = SFTP["hostname"]
+            port = SFTP["port"]
 
             transport = paramiko.Transport((host, port))
-            transport.connect(username = config.sftp["username"], password = config.sftp["password"])
+            transport.connect(username = SFTP["username"], password = SFTP["password"])
 
             sftp = paramiko.SFTPClient.from_transport(transport)
 
-            try:
-                sftp.stat(config.sftp["remoteFilePath"])
-            except FileNotFoundError:
-                sftp.mkdir(config.sftp["remoteFilePath"])
-            finally:
-                pass
+            self.rcsv_make_directory(sftp, SFTP["remote_file_path"])
 
             # Upload file to root FTP folder
-            sftp.put(self.currentWorkingDirectory + "/" + resultFileName, config.sftp["remoteFilePath"] + "/" + resultFileName)
+            sftp.put(self.JSON_RESULT_DIR + "/" + result_filename, SFTP["remote_file_path"] + "/" + result_filename)
                     
-            print("File " + self.currentWorkingDirectory + "/" + resultFileName + " uploaded successfully.")
+            self.logging("File " + self.JSON_RESULT_DIR + "/" + result_filename + " uploaded successfully.")
 
     
         except Exception as e:
-            print(f"Error: {str(e)}")
+            self.logging(f"Error: {str(e)}")
     
         finally:
             # Close the SFTP session and SSH connection            
@@ -102,21 +128,21 @@ class scrappy():
             
 
     
-    def startScrapeData(self):
+    def start_scrape_data(self):
 
         try:
 
-            for plug in self.dictTargetUrl:
-                targerUrl = self.dictTargetUrl[plug]
+            for plug in self.dict_target_url:
+                target_url = self.dict_target_url[plug]
 
-                print("Scraping from ...\n=> " + targerUrl)
-                self.driver.get(targerUrl)
+                self.logging("Scraping from ...\n=> " + target_url)
+                self.driver.get(target_url)
 
-                self.scrapeResults['plug'] = plug
-                self.scrapeResults['stations'] = []
-                self.extractSourceData()
-                self.saveScrapeResultToFile()
-                self.uploadResultFileToSFtp()
+                self.scrape_results['plug'] = plug
+                self.scrape_results['stations'] = []
+                self.extract_source_data()
+                self.save_scrape_result_to_file()
+                self.upload_result_file_to_sftp()
         
         finally:
             self.driver.close()
