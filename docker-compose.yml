@@ -3,6 +3,7 @@ services:
   chrome:
 #    build: ./arm64/Dockerfile
     image: selenium:arm64
+#    image: selenium:win7
     container_name: selenium-chrome
     shm_size: 2gb
     tty: true
