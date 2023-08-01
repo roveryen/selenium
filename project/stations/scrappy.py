@@ -135,7 +135,7 @@ class Scrappy():
             for plug in self.dict_target_url:
                 target_url = self.dict_target_url[plug]
 
-                self.logging("Scraping from ...\n=> " + target_url)
+                self.logging("Scraping from ... => " + target_url)
                 self.driver.get(target_url)
 
                 self.scrape_results['plug'] = plug
@@ -143,9 +143,10 @@ class Scrappy():
                 self.extract_source_data()
                 self.save_scrape_result_to_file()
                 self.upload_result_file_to_sftp()
-        
+
         finally:
-            self.driver.close()
-            self.driver.quit()
+            self.logging(__file__ + " finish")
+            #self.driver.close()
+            #self.driver.quit()
 
     

@@ -7,20 +7,21 @@ from .scrappy_teslahere import ScrappyTeslaHere
 
 try:
 
+    task_array = [
+        ScrappyAudi(),
+        ScrappyICharging(),
+        ScrappyTeslaGuru(),
+        ScrappyTeslaHere()
+    ]
+
     def task_scrape_station_data():
         # Your task code goes here
         scheduler.logging("Executing scheduled task now... task_scrape_station_data")
         # This function will be executed at the scheduled time
 
-        task_array = [
-            ScrappyAudi(),
-            ScrappyICharging(),
-            ScrappyTeslaGuru(),
-            ScrappyTeslaHere()
-        ]
-
         for s in task_array:
             s.start_scrape_data()
+
 
 except Exception as e:
     scheduler.logging(e)

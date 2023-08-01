@@ -82,9 +82,3 @@ class ScrappyAudi(Scrappy):
             self.__extract_map_data()
         finally:
             pass
-
-    def save_scrape_result_to_file(self):
-        try:
-            super().save_scrape_result_to_file()
-        finally:
-            pass

@@ -2,6 +2,7 @@ from selenium import webdriver
 from django.conf import settings
 from pathlib import Path
 
+import urllib3
 import paramiko
 
 import os
@@ -216,7 +217,7 @@ class Scrappy():
             for source in self.dict_target_url:
                 target_url = self.dict_target_url[source]
 
-                self.logging("Scraping from ...\n=> " + target_url)
+                self.logging("Scraping from ... => " + target_url)
                 self.driver.get(target_url)
 
                 self.scrape_results['source'] = source
@@ -224,7 +225,8 @@ class Scrappy():
                 self.extract_source_data()
                 self.save_scrape_result_to_file()
                 self.upload_result_file_to_sftp()
-        
+
         finally:
-            self.driver.close()
-            self.driver.quit()
+            self.logging(__file__ + " done")
+            #self.driver.close()
+            #self.driver.quit()
