@@ -33,16 +33,6 @@ class Scrappy():
 
         self.init_logger()
 
-        options = webdriver.ChromeOptions()
-        options.add_argument('--headless')
-        options.add_argument('--no-sandbox') # An error will occur without this line
-        #options.add_argument('lang=zh_TW.UTF-8')
-        #options.add_argument('--user-data-dir=/Users/roveryen/Library/Application Support/Google/Chrome/Default')
-        options.add_argument("--disable-gpu")
-        options.add_argument("--window-size=1920,1080")
-
-        self.driver = webdriver.Chrome(options=options)
-
         self.SFTP = settings.SFTP
         self.SFTP["remote_file_path"] = "./www.ddcar.com.tw/storage/app/stations"
 
@@ -60,15 +50,36 @@ class Scrappy():
         return re.sub(r".*\((.+)\).*", r"\1", s)
 
     def init_logger(self):
-        fileHandler = logging.FileHandler('/project/logs/log-stations.txt')
-        fileHandler.setFormatter( logging.Formatter('%(asctime)s - %(levelname)s : %(message)s') )
-
         self.logger = logging.getLogger('stations')
         self.logger.setLevel(logging.INFO)
-        self.logger.addHandler(fileHandler)
+        if not self.logger.handlers:
+            fileHandler = logging.FileHandler('/project/logs/log-stations.txt')
+            fileHandler.setFormatter( logging.Formatter('%(asctime)s - %(levelname)s : %(message)s') )
+            self.logger.addHandler(fileHandler)
 
     def logging(self, d):
         self.logger.info(d)
+
+
+    def init_webdriver(self):
+        self.close_webdriver()
+
+        options = webdriver.ChromeOptions()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox') # An error will occur without this line
+        #options.add_argument('lang=zh_TW.UTF-8')
+        #options.add_argument('--user-data-dir=/Users/roveryen/Library/Application Support/Google/Chrome/Default')
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
+
+        self.driver = webdriver.Chrome(options=options)
+
+    def close_webdriver(self):
+        if self.driver is not None:
+            self.driver.close()
+            self.driver.quit()
+
+        self.driver = None
 
     def getresult_filename(self):
         return "result-" + self.scrape_results['plug'] + ".json"
@@ -133,6 +144,9 @@ class Scrappy():
         try:
 
             for plug in self.dict_target_url:
+
+                self.init_webdriver()
+
                 target_url = self.dict_target_url[plug]
 
                 self.logging("Scraping from ... => " + target_url)
@@ -144,9 +158,9 @@ class Scrappy():
                 self.save_scrape_result_to_file()
                 self.upload_result_file_to_sftp()
 
+                self.close_webdriver()
+
         finally:
-            self.logging(__file__ + " finish")
-            #self.driver.close()
-            #self.driver.quit()
+            self.close_webdriver()
 
     

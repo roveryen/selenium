@@ -13,7 +13,9 @@ from .scrappy import Scrappy
 class ScrappyYahoo(Scrappy):
 
     def __init__(self):
-        
+
+        super().__init__()
+
         self.dict_target_url = {
             "yahoo-100-600"  : "https://autos.yahoo.com.tw/car-search?price_range=60-600&power_type=%E9%9B%BB%E5%8B%95&p=1",            
             "yahoo-600"  : "https://autos.yahoo.com.tw/car-search?price_range=600&power_type=%E9%9B%BB%E5%8B%95&p=1",            
@@ -35,8 +37,6 @@ class ScrappyYahoo(Scrappy):
             'evs': []
         }
 
-
-        super().__init__()
 
     def __append_more_specs(self, result, dictSpecification):
         try:
@@ -232,8 +232,6 @@ class ScrappyYahoo(Scrappy):
                     break
 
             self.__extract_detail_data()
-
-            #self.logging ("=> Total " + str(len(self.scrape_results['evs'])) + " results")
 
         finally:
             pass

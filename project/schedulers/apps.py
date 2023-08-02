@@ -7,4 +7,4 @@ class SchedulersConfig(AppConfig):
 
     def ready(self):
         from . import tasks
-        tasks.scheduler.start()
+        tasks.start()

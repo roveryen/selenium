@@ -2,7 +2,6 @@ from selenium import webdriver
 from django.conf import settings
 from pathlib import Path
 
-import urllib3
 import paramiko
 
 import os
@@ -10,12 +9,14 @@ import json
 import re
 import logging
 
-class Scrappy():
+class Scrappy:
 
     dict_target_url = {}
     dict_specification_url = {}
 
     dict_css_selectors = {}
+
+    name = None
 
     SFTP = {}
 
@@ -102,6 +103,7 @@ class Scrappy():
     }
 
     driver = None
+    counter = 0
 
     JSON_RESULT_DIR = str(Path(__file__).resolve().parent) + "/results"
     
@@ -110,21 +112,8 @@ class Scrappy():
 
         self.init_logger()
 
-        options = webdriver.ChromeOptions()
-        options.add_argument('--headless')
-        options.add_argument('--no-sandbox') # An error will occur without this line
-        #options.add_argument('lang=zh_TW.UTF-8')
-        #options.add_argument('--user-data-dir=/Users/roveryen/Library/Application Support/Google/Chrome/Default')
-        options.add_argument("--disable-gpu")
-        options.add_argument("--window-size=1920,1080")
-
-        self.driver = webdriver.Chrome(options=options)
-
         self.SFTP = settings.SFTP
         self.SFTP["remote_file_path"] = "./www.ddcar.com.tw/storage/app/evs"
-
-        #self.JSON_RESULT_DIR = os.path.dirname(os.path.realpath(__file__))
-        #print(self.JSON_RESULT_DIR)
 
     
     def parse_data_to_number_format(self, s):
@@ -140,15 +129,40 @@ class Scrappy():
         return re.sub(r"[^/]+/?(.*)kgm.*", r"\1", s)
 
     def init_logger(self):
-        fileHandler = logging.FileHandler('/project/logs/log-evs.txt')
-        fileHandler.setFormatter( logging.Formatter('%(asctime)s - %(levelname)s : %(message)s') )
 
         self.logger = logging.getLogger('evs')
         self.logger.setLevel(logging.INFO)
-        self.logger.addHandler(fileHandler)
+
+        if not self.logger.handlers:
+            fileHandler = logging.FileHandler('/project/logs/log-evs.txt')
+            fileHandler.setFormatter( logging.Formatter('%(asctime)s - %(levelname)s : %(message)s') )
+            self.logger.addHandler(fileHandler)
+
 
     def logging(self, d):
         self.logger.info(d)
+
+
+    def init_webdriver(self):
+        self.close_webdriver()
+
+        options = webdriver.ChromeOptions()
+        options.add_argument('--headless')
+        options.add_argument('--no-sandbox') # An error will occur without this line
+        #options.add_argument('lang=zh_TW.UTF-8')
+        #options.add_argument('--user-data-dir=/Users/roveryen/Library/Application Support/Google/Chrome/Default')
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
+
+        self.driver = webdriver.Chrome(options=options)
+
+    def close_webdriver(self):
+        if self.driver is not None:
+            self.driver.close()
+            self.driver.quit()
+
+        self.driver = None
+
 
     def get_result_file_name(self):
         return "result-" + self.scrape_results['source'] + ".json"
@@ -215,9 +229,13 @@ class Scrappy():
         try:
 
             for source in self.dict_target_url:
+
+                self.init_webdriver()
+
                 target_url = self.dict_target_url[source]
 
                 self.logging("Scraping from ... => " + target_url)
+
                 self.driver.get(target_url)
 
                 self.scrape_results['source'] = source
@@ -226,7 +244,9 @@ class Scrappy():
                 self.save_scrape_result_to_file()
                 self.upload_result_file_to_sftp()
 
+                self.close_webdriver()
+
         finally:
-            self.logging(__file__ + " done")
-            #self.driver.close()
-            #self.driver.quit()
+            self.close_webdriver()
+
+

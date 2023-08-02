@@ -4,15 +4,17 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 from selenium.common.exceptions import NoSuchElementException, TimeoutException
 
-import time
 import re
+import time
 
 from .scrappy import Scrappy
 
 class Scrappy8891(Scrappy):
 
     def __init__(self):
-        
+
+        super().__init__()
+
         self.dict_target_url = {
             "8891"  : "https://c.8891.com.tw/Models/ev/search/x-x-x-x-x-x-x",
         }
@@ -29,14 +31,12 @@ class Scrappy8891(Scrappy):
 
 
         # ○ / ●
-
         self.scrape_results = {
             'source': '8891',
             'evs': []
         }
 
 
-        super().__init__()
 
     def __append_more_specs(self, result, dictSpecification):
         try:
@@ -79,7 +79,7 @@ class Scrappy8891(Scrappy):
                 label = re.sub(r"cell-\d+-\d+-(.+)", r"\1", cell.get_attribute('id'))
                 label = re.sub(r"\(.+\)", "", label)                
 
-                dictSpecification = {
+                dict_specification = {
                     "label" : label,
                     "key"  : "",
                     "value" : "N/A"
@@ -88,14 +88,14 @@ class Scrappy8891(Scrappy):
 
                 if label in self.dict_label_text_map.keys():
                     key = self.dict_label_text_map[label]
-                    dictSpecification["key"] = key
+                    dict_specification["key"] = key
                         
-                dictSpecification["value"] = cell.text
+                dict_specification["value"] = cell.text
 
-                if len(dictSpecification["label"]) > 0 :
-                    result["specs"].append(dictSpecification)
+                if len(dict_specification["label"]) > 0 :
+                    result["specs"].append(dict_specification)
 
-                result = self.__append_more_specs(result, dictSpecification)
+                result = self.__append_more_specs(result, dict_specification)
 
             #self.logging(result)
 
@@ -190,10 +190,8 @@ class Scrappy8891(Scrappy):
                     nextPage.click()
                     self.logging("To next page, sleep 15 sec.")
                     time.sleep(15)
-                    #return self.__extract_search_result_data()
 
             self.__extract_detail_data()
-            #self.scrape_results["evs"] = self.scrape_results["evs"] + d.scrape_results["evs"]
 
         finally:
             pass
