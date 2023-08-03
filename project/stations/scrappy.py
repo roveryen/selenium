@@ -3,13 +3,12 @@ from django.conf import settings
 from pathlib import Path
 
 import paramiko
-
-import os
+import copy
 import json
 import re
 import logging
 
-class Scrappy():
+class Scrappy:
 
     dict_target_url = {}
 
@@ -33,11 +32,8 @@ class Scrappy():
 
         self.init_logger()
 
-        self.SFTP = settings.SFTP
+        self.SFTP = copy.deepcopy(settings.SFTP)
         self.SFTP["remote_file_path"] = "./www.ddcar.com.tw/storage/app/stations"
-
-        #self.JSON_RESULT_DIR = os.path.dirname(os.path.realpath(__file__))
-        #self.logging(self.JSON_RESULT_DIR)
 
     
     def parse_data_to_number_format(self, s):
