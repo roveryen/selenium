@@ -7,6 +7,7 @@ RUN rm -rf /var/lib/apt/lists/*
 
 RUN rm -f ./*.deb
 
+RUN rm -f /usr/bin/chromedriver
 
 # Install selenium
 RUN pip install -U pip
