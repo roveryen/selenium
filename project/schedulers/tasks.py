@@ -50,9 +50,11 @@ class TaskScheduler:
 
         register_events(self.scheduler)
 
-        self.scheduler.add_job(task_scrape_ev_data,'cron', hour="*/2", minute="5", id='task_scrape_ev_data')
+        self.scheduler.add_job(task_scrape_ev_data,'cron', hour="*/2", minute="5",
+            id='task_scrape_ev_data', misfire_grace_time=600)
 
-        self.scheduler.add_job(task_scrape_station_data, 'cron', hour="*/2", minute="35", id='task_scrape_station_data')
+        self.scheduler.add_job(task_scrape_station_data, 'cron', hour="*/2", minute="35",
+            id='task_scrape_station_data', misfire_grace_time=600)
 
         #self.scheduler.print_jobs()
 

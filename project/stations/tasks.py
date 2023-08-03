@@ -6,9 +6,9 @@ from .scrappy_teslahere import ScrappyTeslaHere
 
 task_array = [
     ScrappyAudi(),
-    #ScrappyICharging(),
-    #ScrappyTeslaGuru(),
-    #ScrappyTeslaHere()
+    ScrappyICharging(),
+    ScrappyTeslaGuru(),
+    ScrappyTeslaHere()
 ]
 
 def task_scrape_station_data():
