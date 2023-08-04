@@ -29,6 +29,7 @@ class ScrappyYahoo(Scrappy):
             'section' : '.trim-spec-detail .spec-wrapper .gabtn[data-ga], .trim-spec-detail .spec-wrapper.spec-right > label',
             'gallery-photos' : '.slick-slide .gabtn',
             'title': '.trim-main > .title',
+            'price': '.trim-main > .price > span > font',
             'spec' : '.spec-wrapper ul>li',
         }
 
@@ -38,35 +39,35 @@ class ScrappyYahoo(Scrappy):
         }
 
 
-    def __append_more_specs(self, result, dictSpecification):
+    def __append_more_specs(self, result, dict_specifications):
         try:
-            if dictSpecification["key"] == "_power" :
+            if dict_specifications["key"] == "_power" :
                 result["specs"].append({
                     "label" : "等效馬力",
                     "key"  : "horsepower",
-                    "value" : self.parse_power_to_horse_power(dictSpecification['value'])
+                    "value" : self.parse_power_to_horse_power(dict_specifications['value'])
                 })
 
                 result["specs"].append({
                     "label" : "扭力",
                     "key"  : "torque",
-                    "value" : self.parse_power_to_torque(dictSpecification['value'])
+                    "value" : self.parse_power_to_torque(dict_specifications['value'])
                 })
-            elif dictSpecification["key"] == "brake" :
+            elif dict_specifications["key"] == "brake" :
                 result["specs"].append({
                     "label" : "前制動",
                     "key"  : "front_brake",
-                    "value" : dictSpecification['value']
+                    "value" : dict_specifications['value']
                 })
 
                 result["specs"].append({
                     "label" : "後制動",
                     "key"  : "rear_brake",
-                    "value" : dictSpecification['value']
+                    "value" : dict_specifications['value']
                 })
 
-            elif dictSpecification["key"] == "wheels" :
-                tempArray = dictSpecification['value'].split(" ", 1)
+            elif dict_specifications["key"] == "wheels" :
+                tempArray = dict_specifications['value'].split(" ", 1)
                     
                 if len(tempArray) > 0 : 
                     frontWheel = tempArray[0]
@@ -118,6 +119,13 @@ class ScrappyYahoo(Scrappy):
                     title = self.driver.find_element(By.CSS_SELECTOR, self.dict_css_selectors["title"])
                     result["title"] = title.text
 
+                    price = self.driver.find_element(By.CSS_SELECTOR, self.dict_css_selectors["price"])
+                    result["specs"].append({
+                        "label" : "售價",
+                        "key"  : "base_price",
+                        "value" : price.text
+                    })
+
                     sections = self.driver.find_elements(By.CSS_SELECTOR, self.dict_css_selectors["section"])
                     for section in sections:
                         nextSibling = section.find_element(By.XPATH, "following-sibling::*[1]")
@@ -129,7 +137,7 @@ class ScrappyYahoo(Scrappy):
 
                     specs = self.driver.find_elements(By.CSS_SELECTOR, self.dict_css_selectors["spec"])
                     for index, spec in enumerate(specs):
-                        dictSpecification = {
+                        dict_specifications = {
                             "label" : "Unknown",
                             "key"  : "",
                             "value" : "N/A"
@@ -138,21 +146,21 @@ class ScrappyYahoo(Scrappy):
                         spans = spec.find_elements(By.CSS_SELECTOR, "span")
                         for index, span in enumerate(spans):
                             if index == 0:
-                                dictSpecification["label"] = span.text
+                                dict_specifications["label"] = span.text
 
                                 if span.text in self.dict_label_text_map.keys():
                                     key = self.dict_label_text_map[span.text]
-                                    dictSpecification["key"] = key
+                                    dict_specifications["key"] = key
                         
                             elif index == 1:
-                                dictSpecification["value"] = span.text
+                                dict_specifications["value"] = span.text
                             else:
-                                dictSpecification["value"] += "/" + span.text
+                                dict_specifications["value"] += "/" + span.text
 
-                        if len(dictSpecification["label"]) > 0 :
-                            result["specs"].append(dictSpecification)
+                        if len(dict_specifications["label"]) > 0 :
+                            result["specs"].append(dict_specifications)
 
-                        result = self.__append_more_specs(result, dictSpecification)
+                        result = self.__append_more_specs(result, dict_specifications)
 
                     #self.logging(result)
                     self.scrape_results['evs'].append(result)
